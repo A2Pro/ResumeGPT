@@ -1,12 +1,16 @@
 import os
 from dotenv import load_dotenv
-load_dotenv()
-
 import stripe
 from flask import Flask, jsonify, render_template, request
+from openai import OpenAI
+
+load_dotenv()
 
 app = Flask(__name__)
 
+client = OpenAI(
+    api_key=os.getenv("OPENAI_KEY"),
+)
 
 stripe_keys = {
     "secret_key": os.getenv("SECRET_KEY"),
@@ -14,6 +18,19 @@ stripe_keys = {
     "endpoint_secret": os.getenv("ENDPOINT_KEY")
 }
 stripe.api_key = stripe_keys["secret_key"]
+
+
+def ask_gpt(prompt):
+    response = client.chat.completions.create(
+            messages=[
+                {
+                    "role": "user",
+                    "content": "You are an expert recruiter who has worked at the biggest tech companies for the last 20 years. You understand what makes a great resume and how to make a resume stand out for both the automated systems that are screening resumes and the internal recruiters that are reviewing resumes to determine if there is a potential job match. You are now helping candidates get interviews for the jobs they want by helping them tailor their resume for the role they wish to apply for. You are successful when the resume leads to an interview for the candidate.  You must be truthful in the experience of the candidate and cannot add experience that was not already on the resume, This is very important and must not be disobeyed. Here's the resume: "+ prompt,
+                }
+            ],
+            model="gpt-3.5-turbo",
+        )
+    return response.choices[0].message.content
 
 
 @app.route("/")
