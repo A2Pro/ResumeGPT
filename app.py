@@ -1,12 +1,18 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 import stripe
 from flask import Flask, jsonify, render_template, request
 
 app = Flask(__name__)
 
-stripe_keys ={}
 
+stripe_keys = {
+    "secret_key": os.getenv("SECRET_KEY"),
+    "publishable_key": os.getenv("PUBLIC_KEY"),
+    "endpoint_secret": os.getenv("ENDPOINT_KEY")
+}
 stripe.api_key = stripe_keys["secret_key"]
 
 
