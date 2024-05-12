@@ -10,11 +10,6 @@ stripe_keys ={}
 stripe.api_key = stripe_keys["secret_key"]
 
 
-@app.route("/hello")
-def hello_world():
-    return jsonify("hello, world!")
-
-
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -73,8 +68,6 @@ def stripe_webhook():
     # Handle the checkout.session.completed event
     if event['type'] == 'checkout.session.completed':
         session = event['data']['object']
-
-        # Fulfill the purchase...
         handle_checkout_session(session)
 
     return 'Success', 200
@@ -82,7 +75,6 @@ def stripe_webhook():
 
 def handle_checkout_session(session):
     print("Payment was successful.")
-    # TODO: run some custom code here
 
 
 @app.route("/success")
