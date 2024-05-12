@@ -8,6 +8,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
+credits = 0
+
 client = OpenAI(
     api_key=os.getenv("OPENAI_KEY"),
 )
@@ -102,6 +104,7 @@ def handle_checkout_session(session):
 
 @app.route("/success")
 def success():
+    credits += 100
     return render_template("success.html")
 
 
@@ -109,6 +112,22 @@ def success():
 def cancelled():
     return render_template("cancelled.html")
 
+@app.route("/resumeupload")
+def resume_upload():
+    if(credits <  100):
+        return "Too few credits! Minimum 100 required!"
+    return render_template("resumeuploader.html")
+
+@app.route("/process/<text>")
+def process(text):
+    response = ask_gpt(text)
+    return response
+
+@app.route("/reducecredits")
+def reduce_credits():
+    credits-=100
+    if(credits < 0):
+        credits = 0
 
 if __name__ == "__main__":
     app.run()
