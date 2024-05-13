@@ -35,7 +35,7 @@ def ask_gpt(prompt):
             messages=[
                 {
                     "role": "user",
-                    "content": "You are an expert recruiter who has worked at the biggest tech companies for the last 20 years. You understand what makes a great resume and how to make a resume stand out for both the automated systems that are screening resumes and the internal recruiters that are reviewing resumes to determine if there is a potential job match. You are now helping candidates get interviews for the jobs they want by helping them tailor their resume for the role they wish to apply for. You are successful when the resume leads to an interview for the candidate.  You must be truthful in the experience of the candidate and cannot add experience that was not already on the resume, This is very important and must not be disobeyed. Here's the resume: "+ prompt,
+                    "content": "You are an expert recruiter who has worked at the biggest tech companies for the last 20 years. You understand what makes a great resume and how to make a resume stand out for both the automated systems that are screening resumes and the internal recruiters that are reviewing resumes to determine if there is a potential job match. You are now helping candidates get interviews for the jobs they want by helping them tailor their resume for the role they wish to apply for. You are successful when the resume leads to an interview for the candidate.  You must be truthful in the experience of the candidate and cannot add experience that was not already on the resume, This is very important and must not be disobeyed. Essentially, what you have to alter the resume, keeping the structure, to adhere to to the company description of the jobs. You must not fabricate any acheivements. Here's the resume: "+ prompt,
                 }
             ],
             model="gpt-3.5-turbo",
@@ -60,18 +60,20 @@ def create_checkout_session():
     stripe.api_key = stripe_keys["secret_key"]
     try:
         checkout_session = stripe.checkout.Session.create(
-            line_items=[{
-                         'price_data': {
-                             'currency': 'usd',
-                             'unit_amount': 400,
-                             'product_data': {
-                                 'name': 'One Resume',
-                                 'description': 'Alter just one resume using AI!',
-                                 'images': ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7WQvQsdrb56ZfiSTm2mSxrjodRQ-hJIfhkg&usqp=CAU'],
-                              },
-                         },
-                        'quantity': 1,
-                     }],
+            line_items=[
+                {
+                    'price_data': {
+                        'currency': 'usd',
+                        'unit_amount': 400,
+                        'product_data': {
+                            'name': 'One Resume',
+                            'description': 'Alter just one resume using AI!',
+                            'images': ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7WQvQsdrb56ZfiSTm2mSxrjodRQ-hJIfhkg&usqp=CAU'],
+                        },
+                    },
+                    'quantity': 1,
+                },
+            ],
             mode='payment',
             success_url=domain_url + "success?session_id={CHECKOUT_SESSION_ID}",
             cancel_url=domain_url + "cancelled",
@@ -80,6 +82,7 @@ def create_checkout_session():
     except Exception as e:
         print(e)
         return jsonify(error=str(e)), 403
+
 
 
 @app.route("/webhook", methods=['POST'])
