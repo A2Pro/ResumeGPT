@@ -3,32 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Uploader</title>
+    <title>Text Processor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #e6f7e8; /* Green theme */
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            max-width: 400px;
+            margin: 50px auto;
+            text-align: center;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff; /* Blue theme */
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3; /* Darker shade of blue */
+        }
+    </style>
 </head>
 <body>
-    <h1>Upload Your Resume</h1>
-    <form id="uploadForm" enctype="multipart/form-data">
-        <input type="file" name="resumeFile" accept=".txt">
-        <button type="submit">Upload</button>
-    </form>
-    <div id="response"></div>
+    <div class="container">
+        <input type="text" id="textInput" placeholder="Enter text...">
+        <button onclick="submitText()">Submit</button>
+        <div id="result"></div>
+    </div>
 
     <script>
-        document.getElementById("uploadForm").addEventListener("submit", function(event) {
-            event.preventDefault();
-            var formData = new FormData(this);
-            fetch("/upload", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById("response").innerHTML = "<p>Response: " + data.text + "</p>";
-            })
-            .catch(error => {
-                console.error("Error:", error);
-            });
-        });
+        function submitText() {
+            var inputText = document.getElementById("textInput").value;
+            fetch(`/process/${inputText}`)
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById("result").innerText = data;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
     </script>
 </body>
 </html>

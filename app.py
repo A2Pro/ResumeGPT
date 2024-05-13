@@ -8,11 +8,19 @@ load_dotenv()
 
 app = Flask(__name__)
 
+global credits
+
 credits = 0
 
 client = OpenAI(
     api_key=os.getenv("OPENAI_KEY"),
 )
+
+def reduce_credits():
+    global credits
+    credits-=100
+    if(credits < 0):
+        credits = 0
 
 stripe_keys = {
     "secret_key": os.getenv("SECRET_KEY"),
@@ -55,11 +63,11 @@ def create_checkout_session():
             line_items=[{
                          'price_data': {
                              'currency': 'usd',
-                             'unit_amount': 4000,
+                             'unit_amount': 400,
                              'product_data': {
                                  'name': 'One Resume',
                                  'description': 'Alter just one resume using AI!',
-                                 'images': ['https://example.com/t-shirt.png'],
+                                 'images': ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR7WQvQsdrb56ZfiSTm2mSxrjodRQ-hJIfhkg&usqp=CAU'],
                               },
                          },
                         'quantity': 1,
@@ -70,6 +78,7 @@ def create_checkout_session():
         )
         return jsonify({"sessionId": checkout_session["id"]})
     except Exception as e:
+        print(e)
         return jsonify(error=str(e)), 403
 
 
@@ -104,8 +113,9 @@ def handle_checkout_session(session):
 
 @app.route("/success")
 def success():
+    global credits
     credits += 100
-    return render_template("success.html")
+    return render_template("credits.html", credits = credits)
 
 
 @app.route("/cancelled")
@@ -114,8 +124,10 @@ def cancelled():
 
 @app.route("/resumeupload")
 def resume_upload():
+    global credits
     if(credits <  100):
         return "Too few credits! Minimum 100 required!"
+    reduce_credits()
     return render_template("resumeuploader.html")
 
 @app.route("/process/<text>")
@@ -123,11 +135,10 @@ def process(text):
     response = ask_gpt(text)
     return response
 
-@app.route("/reducecredits")
-def reduce_credits():
-    credits-=100
-    if(credits < 0):
-        credits = 0
+@app.route("/credits")
+def return_credits():
+    return render_template("credits.html",credits = credits)
+
 
 if __name__ == "__main__":
     app.run()
