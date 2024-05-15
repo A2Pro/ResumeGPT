@@ -1,21 +1,19 @@
 import os
 from dotenv import load_dotenv
 import stripe
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session
 from openai import OpenAI
+import pymongo
 
 load_dotenv()
 
 app = Flask(__name__)
 
-global credits
-
-credits = 0
-
 client = OpenAI(
     api_key=os.getenv("OPENAI_KEY"),
 )
 
+client = pymongo.MongoClient(os.getenv("MONGODB_URI"))
 def reduce_credits():
     global credits
     credits-=100
@@ -29,6 +27,22 @@ stripe_keys = {
 }
 stripe.api_key = stripe_keys["secret_key"]
 
+def get_collection():
+    collection = client['User_Passes']['user/passes']
+    return collection #collection
+
+def get_entry(username):
+    entry  = get_collection().find_one({"name": username})
+    return entry #collection
+
+def get_credits(username):
+    return get_entry(username)["credits"] #int
+
+def add_creds(username, amount):
+    get_collection().update_one(
+      { "name" : username },
+      { "$set": { "credits" : get_credits(username)+1 } } #void
+    )
 
 def ask_gpt(prompt):
     response = client.chat.completions.create(
