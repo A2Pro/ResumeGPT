@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 import stripe
-from flask import Flask, jsonify, render_template, request, session
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from openai import OpenAI
 import pymongo
 
@@ -38,11 +38,18 @@ def get_entry(username):
 def get_credits(username):
     return get_entry(username)["credits"] #int
 
+def get_password(username):
+    return get_entry(username)["password"] #int
+
 def add_creds(username, amount):
     get_collection().update_one(
       { "name" : username },
       { "$set": { "credits" : get_credits(username)+1 } } #void
     )
+
+def add_user(username, password):
+    newUserPass = {"name":username, "password" : password ,"credits":0}
+    get_collection().insert_one(newUserPass)
 
 def ask_gpt(prompt):
     response = client.chat.completions.create(
@@ -53,14 +60,29 @@ def ask_gpt(prompt):
                 }
             ],
             model="gpt-3.5-turbo",
-        )
+    )
     return response.choices[0].message.content
 
 
 @app.route("/")
 def index():
+    if(not session["username"] ):
+        return redirect(url_for(login))
     return render_template("index.html")
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        if(get_entry(username)!= None and password == get_password(username)):
+            return("Yipee!")
+        elif(get_entry(username)!= None and password != get_password(username)):
+            return("Invalid password")
+        elif(get_entry(username)== None):
+            add_user(username, password)
+        return render_template('login.html', message='Invalid username or password!')
+    return render_template('login.html', message='')
 
 @app.route("/config")
 def get_publishable_key():
