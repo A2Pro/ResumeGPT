@@ -4,21 +4,18 @@ import stripe
 from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 from openai import OpenAI
 import pymongo
-
+import docx
+from pypdf import PdfReader 
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("APP_SECRET_KEY")
 
-client = OpenAI(
+gptclient = OpenAI(
     api_key=os.getenv("OPENAI_KEY"),
 )
 
 client = pymongo.MongoClient(os.getenv("MONGODB_URI"))
-def reduce_credits():
-    global credits
-    credits-=100
-    if(credits < 0):
-        credits = 0
 
 stripe_keys = {
     "secret_key": os.getenv("SECRET_KEY"),
@@ -44,15 +41,15 @@ def get_password(username):
 def add_creds(username, amount):
     get_collection().update_one(
       { "name" : username },
-      { "$set": { "credits" : get_credits(username)+1 } } #void
+      { "$set": { "credits" : get_credits(username)+amount} } #void
     )
 
 def add_user(username, password):
-    newUserPass = {"name":username, "password" : password ,"credits":0}
+    newUserPass = {"name":username, "password" : password ,"credits":1}
     get_collection().insert_one(newUserPass)
 
 def ask_gpt(prompt):
-    response = client.chat.completions.create(
+    response = gptclient.chat.completions.create(
             messages=[
                 {
                     "role": "user",
@@ -61,26 +58,32 @@ def ask_gpt(prompt):
             ],
             model="gpt-3.5-turbo",
     )
-    return response.choices[0].message.content
+    return response.choices[0].message.content #str
 
 
 @app.route("/")
 def index():
-    if(not session["username"] ):
-        return redirect(url_for(login))
+    if("logged_in" not in session.keys() or session["logged_in"] == False ):
+        return redirect(url_for("login"))
     return render_template("index.html")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form['username']
+        session["username"] = username
         password = request.form['password']
         if(get_entry(username)!= None and password == get_password(username)):
+            session["logged_in"] = True
             return("Yipee!")
         elif(get_entry(username)!= None and password != get_password(username)):
+            session["logged_in"] = False
             return("Invalid password")
-        elif(get_entry(username)== None):
+        elif(get_entry(username)==None):
             add_user(username, password)
+            session["logged_in"] = True
+            session["username"] = username
+            return("account made!")
         return render_template('login.html', message='Invalid username or password!')
     return render_template('login.html', message='')
 
@@ -125,7 +128,6 @@ def create_checkout_session():
 def stripe_webhook():
     payload = request.get_data(as_text=True)
     sig_header = request.headers.get('Stripe-Signature')
-
     try:
         event = stripe.Webhook.construct_event(
             payload, sig_header, stripe_keys["endpoint_secret"]
@@ -152,9 +154,8 @@ def handle_checkout_session(session):
 
 @app.route("/success")
 def success():
-    global credits
-    credits += 100
-    return render_template("credits.html", credits = credits)
+    add_creds(session["username"], 1)
+    return render_template("index.html", credits = get_credits(session["username"]))
 
 
 @app.route("/cancelled")
@@ -163,20 +164,37 @@ def cancelled():
 
 @app.route("/resumeupload")
 def resume_upload():
-    global credits
-    if(credits <  100):
+    if(get_credits(session["username"]) <  1):
         return "Too few credits! Minimum 100 required!"
-    reduce_credits()
+    add_creds(session['username'], -1)
     return render_template("resumeuploader.html")
 
-@app.route("/process/<text>")
-def process(text):
-    response = ask_gpt(text)
+def readtxt(file):
+    doc = docx.Document(file)
+    fullText = []
+    for para in doc.paragraphs:
+        fullText.append(para.text)
+    return '\n'.join(fullText)
+
+
+@app.route("/process", methods=['POST'])
+def process():
+    if 'file' not in request.files:
+        return "No file uploaded", 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return "No file selected", 400
+    fulltext = ""
+    reader = PdfReader(file) 
+    for page in reader.pages:
+        fulltext += page.extract_text()
+    response = ask_gpt(fulltext)
     return response
 
 @app.route("/credits")
 def return_credits():
-    return render_template("credits.html",credits = credits)
+    return render_template("credits.html",credits = get_credits(session["username"]))
 
 
 if __name__ == "__main__":

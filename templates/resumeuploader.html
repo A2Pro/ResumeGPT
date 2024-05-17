@@ -25,9 +25,7 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
 
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
+        input[type="file"] {
             margin-bottom: 10px;
         }
 
@@ -46,22 +44,44 @@
 </head>
 <body>
     <div class="container">
-        <input type="text" id="textInput" placeholder="Enter text...">
-        <button onclick="submitText()">Submit</button>
+        <input type="file" id="fileInput">
+        <button onclick="submitFile()">Submit</button>
         <div id="result"></div>
+        <a id="downloadLink" style="display: none;">Download Resume</a>
     </div>
 
     <script>
-        function submitText() {
-            var inputText = document.getElementById("textInput").value;
-            fetch(`/process/${inputText}`)
-                .then(response => response.text())
-                .then(data => {
-                    document.getElementById("result").innerText = data;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+        function submitFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/process', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('result').innerText = data;
+                // Create a Blob containing the processed text
+                const blob = new Blob([data], { type: 'application/msword' });
+                const url = window.URL.createObjectURL(blob);
+                // Create a link element for downloading
+                const downloadLink = document.getElementById('downloadLink');
+                downloadLink.href = url;
+                downloadLink.download = 'processed_text.docx';
+                downloadLink.style.display = 'block'; // Make the download link visible
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         }
     </script>
 </body>
