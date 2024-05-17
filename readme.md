@@ -1,6 +1,6 @@
 ## About Resume-GPT
 Customize your resumes with the power of GPT!
-Under the hood, uses OpenAI API prompts + Stripe for payments
+Under the hood, uses OpenAI API prompts + Stripe for payments + MongoDB 
 
 ##### Built for:
 https://replit.com/bounties/@ProductGuy101/web-app-to-modify-do
